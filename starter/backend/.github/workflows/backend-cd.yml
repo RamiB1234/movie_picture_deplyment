@@ -1,0 +1,8 @@
+name: Backend — CD
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "starter/backend/**"   # only when backend changes
+  workflow_dispatch:

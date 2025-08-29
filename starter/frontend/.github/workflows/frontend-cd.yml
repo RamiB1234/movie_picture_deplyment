@@ -1,0 +1,9 @@
+name: Frontend — CD
+
+on:
+  push:
+    branches: [ main ]
+    # only run when frontend changes
+    paths:
+      - "starter/frontend/**"
+  workflow_dispatch:
