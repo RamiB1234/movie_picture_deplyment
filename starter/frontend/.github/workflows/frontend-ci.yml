@@ -1,9 +1,0 @@
-name: Frontend — CI
-
-on:
-  pull_request:
-    branches: [ main ]
-    # only run when frontend changes
-    paths:
-      - "starter/frontend/**"
-  workflow_dispatch:

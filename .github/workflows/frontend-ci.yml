@@ -1,0 +1,73 @@
+name: Frontend — CI
+
+on:
+  pull_request:
+    branches: [ main ]
+    # only run when frontend changes
+    paths:
+      - "starter/frontend/**"
+  workflow_dispatch:
+
+env:
+  REACT_APP_MOVIE_API_URL: "http://localhost:5000"
+
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: starter/frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Use Node from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "starter/frontend/.nvmrc"
+          cache: "npm"
+          cache-dependency-path: "starter/frontend/package-lock.json"
+
+      - name: Run Lint
+        run: |
+          npm ci && npm run lint
+  
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: starter/frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Use Node from .nvmrc
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: "starter/frontend/.nvmrc"
+          cache: "npm"
+          cache-dependency-path: "starter/frontend/package-lock.json"
+
+      - name: Run All Tests
+        env:
+          CI: true
+        run: |
+          npm ci && npm test
+  
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: starter/frontend
+
+    needs: [lint, test]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build Docker Image
+        run: | #Using env varable for URL and tagging the image with unqie SHA
+          docker build --build-arg=REACT_APP_MOVIE_API_URL="${REACT_APP_MOVIE_API_URL}" --tag=mp-frontend:ci-${{ github.sha }} .
+  
+  
