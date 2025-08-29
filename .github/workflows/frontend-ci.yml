@@ -66,6 +66,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        
       - name: Build Docker Image
         run: | #Using env varable for URL and tagging the image with unqie SHA
           docker build --build-arg=REACT_APP_MOVIE_API_URL="${REACT_APP_MOVIE_API_URL}" --tag=mp-frontend:ci-${{ github.sha }} .
