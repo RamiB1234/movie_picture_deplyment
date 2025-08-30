@@ -88,3 +88,52 @@ jobs:
           docker tag mp-frontend:${SHA} ${REGISTRY}/${REPO}:${SHA}
           docker push ${REGISTRY}/${REPO}:${SHA}
           echo "IMAGE_URI=${REGISTRY}/${REPO}:${SHA}" >> $GITHUB_ENV
+  
+  deploy:
+    name: Deploy to EKS
+    runs-on: ubuntu-latest
+    needs: [build_and_push]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update kubeconfig for EKS
+        run: |
+          aws eks update-kubeconfig --name movie-cluster --region "${{ secrets.AWS_REGION }}"
+          kubectl version --client
+          kubectl get ns
+
+      - name: Install kustomize
+        run: |
+          KUSTOMIZE_VER="5.4.1"
+          curl -sSfL "https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv${KUSTOMIZE_VER}/kustomize_v${KUSTOMIZE_VER}_linux_amd64.tar.gz" \
+            | tar -xz -C /usr/local/bin kustomize
+          kustomize version
+
+      - name: Set image tag in manifests (kustomize)
+        working-directory: starter/frontend/k8s
+        env:
+          IMAGE_URI: ${{ env.IMAGE_URI }}
+        run: |
+          # IMAGE_URI was exported by the build_and_push job via $GITHUB_ENV
+          echo "Using IMAGE_URI=${IMAGE_URI}"
+          # Update the image reference used by kustomization.yaml
+          kustomize edit set image frontend=${IMAGE_URI}
+          # Show the rendered manifest (for logs)
+          kustomize build | head -n 50
+
+      - name: Apply manifests to the cluster
+        working-directory: starter/frontend/k8s
+        run: |
+          kustomize build | kubectl apply -f -
+          # optional: wait for rollout
+          kubectl rollout status deploy/frontend -n default --timeout=120s
+
