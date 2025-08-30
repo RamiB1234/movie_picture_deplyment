@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - "starter/frontend/**" 
+      - "starter/frontend/**"
   workflow_dispatch:
 
 env:
@@ -24,12 +24,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: "starter/frontend/.nvmrc"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: "starter/frontend/package-lock.json"
 
-      - name: Run Lint
+      - name: Lint
         run: |
           npm ci && npm run lint
+
   test:
     runs-on: ubuntu-latest
     defaults:
@@ -42,9 +43,10 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: "starter/frontend/.nvmrc"
-          cache: "npm"
+          cache: npm
           cache-dependency-path: "starter/frontend/package-lock.json"
-      - name: Run All Tests
+
+      - name: Test
         env:
           CI: true
         run: |
@@ -57,6 +59,8 @@ jobs:
     defaults:
       run:
         working-directory: starter/frontend
+    outputs:
+      image_uri: ${{ steps.set-output.outputs.image_uri }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -71,9 +75,9 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-region:            ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         id: ecr
@@ -81,14 +85,19 @@ jobs:
 
       - name: Tag & Push image to ECR
         env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}     # <acct>.dkr.ecr.<region>.amazonaws.com
-          REPO:     ${{ secrets.ECR_REPO_FRONTEND }}      # mp-frontend
+          REGISTRY: ${{ steps.ecr.outputs.registry }}   # <acct>.dkr.ecr.<region>.amazonaws.com
+          REPO:     ${{ secrets.ECR_REPO_FRONTEND }}    # mp-frontend
           SHA:      ${{ github.sha }}
         run: |
           docker tag mp-frontend:${SHA} ${REGISTRY}/${REPO}:${SHA}
           docker push ${REGISTRY}/${REPO}:${SHA}
           echo "IMAGE_URI=${REGISTRY}/${REPO}:${SHA}" >> $GITHUB_ENV
-  
+
+      - name: Expose image URI to next job
+        id: set-output
+        run: |
+          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
+
   deploy:
     name: Deploy to EKS
     runs-on: ubuntu-latest
@@ -96,12 +105,15 @@ jobs:
     defaults:
       run:
         shell: bash
-        working-directory: starter/frontend  
+        working-directory: starter/frontend
+    env:
+      IMAGE_URI: ${{ needs.build_and_push.outputs.image_uri }}
+      AWS_REGION: ${{ secrets.AWS_REGION }}
     steps:
       - uses: actions/checkout@v4
 
       - name: Configure AWS credentials
-      ​  uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -115,14 +127,13 @@ jobs:
       # Install kustomize (needed for `kustomize edit set image`)
       - name: Install kustomize
         run: |
-          curl -sLo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.1/kustomize_v5.4.1_linux_amd64.tar.gz
+          curl -sLo kustomize.tar.gz \
+            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.1/kustomize_v5.4.1_linux_amd64.tar.gz
           tar -xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
 
-      - name: Set image tag with kustomize
-        env:
-          IMAGE_URI: ${{ env.IMAGE_URI }} 
+      - name: Set image tag with kustomize and apply
         run: |
           cd k8s
-          kustomize edit set image frontend=${IMAGE_URI}   # for backend: `backend=${IMAGE_URI}`
+          kustomize edit set image frontend=${IMAGE_URI}
           kustomize build | kubectl apply -f -
