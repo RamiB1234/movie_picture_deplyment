@@ -19,7 +19,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      
+
       - name: Use Node from .nvmrc
         uses: actions/setup-node@v4
         with:
@@ -39,6 +39,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Use Node from .nvmrc
         uses: actions/setup-node@v4
         with:
@@ -59,8 +60,6 @@ jobs:
     defaults:
       run:
         working-directory: starter/frontend
-    outputs:
-      image_uri: ${{ steps.set-output.outputs.image_uri }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -91,12 +90,6 @@ jobs:
         run: |
           docker tag mp-frontend:${SHA} ${REGISTRY}/${REPO}:${SHA}
           docker push ${REGISTRY}/${REPO}:${SHA}
-          echo "IMAGE_URI=${REGISTRY}/${REPO}:${SHA}" >> $GITHUB_ENV
-
-      - name: Expose image URI to next job
-        id: set-output
-        run: |
-          echo "image_uri=${IMAGE_URI}" >> "$GITHUB_OUTPUT"
 
   deploy:
     name: Deploy to EKS
@@ -107,8 +100,9 @@ jobs:
         shell: bash
         working-directory: starter/frontend
     env:
-      IMAGE_URI: ${{ needs.build_and_push.outputs.image_uri }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
+      REPO:       ${{ secrets.ECR_REPO_FRONTEND }} # mp-frontend
+      SHA:        ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -124,7 +118,10 @@ jobs:
           aws eks update-kubeconfig --name movie-cluster --region "$AWS_REGION"
           kubectl auth can-i get pods
 
-      # Install kustomize (needed for `kustomize edit set image`)
+      - name: Login to Amazon ECR (for registry URL)
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Install kustomize
         run: |
           curl -sLo kustomize.tar.gz \
@@ -133,7 +130,11 @@ jobs:
           sudo mv kustomize /usr/local/bin/
 
       - name: Set image tag with kustomize and apply
+        env:
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
+          IMAGE_URI="${REGISTRY}/${REPO}:${SHA}"
+          echo "Using IMAGE_URI=${IMAGE_URI}"
           cd k8s
           kustomize edit set image frontend=${IMAGE_URI}
           kustomize build | kubectl apply -f -
