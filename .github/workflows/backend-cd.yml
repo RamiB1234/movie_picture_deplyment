@@ -86,7 +86,6 @@ jobs:
         run: |
           docker tag mp-backend:${SHA} ${REGISTRY}/${REPO}:${SHA}
           docker push ${REGISTRY}/${REPO}:${SHA}
-          echo "IMAGE_URI=${REGISTRY}/${REPO}:${SHA}" >> $GITHUB_ENV
 
   deploy:
     name: Deploy to EKS
@@ -96,6 +95,10 @@ jobs:
       run:
         shell: bash
         working-directory: starter/backend
+    env:
+      AWS_REGION: ${{ secrets.AWS_REGION }}
+      REPO:       ${{ secrets.ECR_REPO_BACKEND }}  # mp-backend
+      SHA:        ${{ github.sha }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -112,16 +115,23 @@ jobs:
           aws eks update-kubeconfig --name movie-cluster --region "${AWS_REGION}"
           kubectl auth can-i get pods
 
+      - name: Login to Amazon ECR (for registry URL)
+        id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
       - name: Install kustomize
         run: |
-          curl -sLo kustomize.tar.gz https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.1/kustomize_v5.4.1_linux_amd64.tar.gz
+          curl -sLo kustomize.tar.gz \
+            https://github.com/kubernetes-sigs/kustomize/releases/download/kustomize%2Fv5.4.1/kustomize_v5.4.1_linux_amd64.tar.gz
           tar -xzf kustomize.tar.gz
           sudo mv kustomize /usr/local/bin/
 
       - name: Set image tag and apply
         env:
-          IMAGE_URI: ${{ env.IMAGE_URI }}
+          REGISTRY: ${{ steps.ecr.outputs.registry }}
         run: |
+          IMAGE_URI="${REGISTRY}/${REPO}:${SHA}"
+          echo "Using IMAGE_URI=${IMAGE_URI}"
           cd k8s
           kustomize edit set image backend=${IMAGE_URI}
           kustomize build | kubectl apply -f -
