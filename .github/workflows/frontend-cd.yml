@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  REACT_APP_MOVIE_API_URL: "http://backend:5000"
+  REACT_APP_MOVIE_API_URL: "http://34.228.36.216:31836"
 
 jobs:
   lint:
