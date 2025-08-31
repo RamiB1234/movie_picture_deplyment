@@ -1,6 +1,6 @@
 # Movie Picture Pipeline
 
-🌐 **Live Demo:**  
+**Live Demo:**  
 - **Frontend:** [http://k8s-default-frontend-bd8136da38-ef293b6d43a885de.elb.us-east-1.amazonaws.com/](http://k8s-default-frontend-bd8136da38-ef293b6d43a885de.elb.us-east-1.amazonaws.com/)  
 - **Backend API:** [http://k8s-default-backend-bfe2fb02f5-c5df2a89b8fec786.elb.us-east-1.amazonaws.com/movies](http://k8s-default-backend-bfe2fb02f5-c5df2a89b8fec786.elb.us-east-1.amazonaws.com/movies)
 
@@ -34,14 +34,14 @@ To achieve full CI/CD automation, I designed two sets of workflows for each appl
    - Build Docker images and push to **Amazon ECR**.  
    - Deploy updated images to **Amazon EKS** automatically.  
 
-### 🔄 CI/CD Flow
+### CI/CD Flow
 1. Developer pushes code → CI validates (lint + test + build).  
 2. On merge → CD builds Docker images, pushes to **ECR**, and updates EKS workloads.  
 3. Application is live with zero manual intervention.  
 
 ---
 
-## 📸 Screenshots of Pipelines
+## Screenshots of Pipelines
 
 All workflows were executed successfully as seen below (stored in `Screenshots/`):  
 
@@ -59,7 +59,7 @@ All workflows were executed successfully as seen below (stored in `Screenshots/`
 
 ---
 
-## 🚀 Proof of Working Demo
+## Proof of Working Demo
 
 The application was deployed successfully on **EKS**.  
 
