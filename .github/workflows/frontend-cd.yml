@@ -8,7 +8,7 @@ on:
   workflow_dispatch:
 
 env:
-  REACT_APP_MOVIE_API_URL: "http://34.228.36.216:31836"
+  REACT_APP_MOVIE_API_URL: "http://k8s-default-backend-bfe2fb02f5-c5df2a89b8fec786.elb.us-east-1.amazonaws.com"
 
 jobs:
   lint:
@@ -26,6 +26,15 @@ jobs:
           node-version-file: "starter/frontend/.nvmrc"
           cache: npm
           cache-dependency-path: "starter/frontend/package-lock.json"
+
+      # ADDED: Explicit cache restore BEFORE dependency install (per rubric)
+      - name: Restore npm cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Lint
         run: |
@@ -46,6 +55,15 @@ jobs:
           node-version-file: "starter/frontend/.nvmrc"
           cache: npm
           cache-dependency-path: "starter/frontend/package-lock.json"
+
+      # ADDED: Explicit cache restore BEFORE dependency install (per rubric)
+      - name: Restore npm cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('starter/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
 
       - name: Test
         env:
