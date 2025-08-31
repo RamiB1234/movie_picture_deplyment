@@ -74,10 +74,10 @@ The application was deployed successfully on **EKS**.
 Docker images for both applications were built & pushed to **Amazon ECR**:  
 
 - **Private Repositories**  
-  ![Private Repos](Screenshots/private repos.PNG)
+  ![Private Repos](Screenshots/private_repos.PNG)
 
 - **Uploaded Backend Image**  
-  ![Uploaded Backend Image](Screenshots/uploaded image.PNG)
+  ![Uploaded Backend Image](Screenshots/uploaded_image.PNG)
 
 ---
 
