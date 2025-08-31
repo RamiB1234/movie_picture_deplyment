@@ -2,15 +2,12 @@ apiVersion: v1
 kind: Service
 metadata:
   name: frontend
-  labels:
-    app: frontend
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+  namespace: default
 spec:
   type: LoadBalancer
   selector:
     app: frontend
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 3000
+    - name: http
+      port: 80          # Service port exposed via ELB
+      targetPort: 3000  # React container port

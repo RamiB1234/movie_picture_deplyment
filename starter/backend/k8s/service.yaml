@@ -1,17 +1,13 @@
-# backend service
 apiVersion: v1
 kind: Service
 metadata:
   name: backend
-  labels:
-    app: backend
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+  namespace: default
 spec:
   type: LoadBalancer
   selector:
     app: backend
   ports:
-    - protocol: TCP
-      port: 80
-      targetPort: 5000
+    - name: http
+      port: 80          # Service port exposed via ELB
+      targetPort: 5000  # Flask container port
